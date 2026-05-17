@@ -36,7 +36,9 @@ These rules implement the three-layer defense documented in `docs/adr/0001-multi
   - A composite index that begins with `tenantId`.
   - PostgreSQL Row-Level Security enabled and forced, with a `tenant_isolation` policy filtering by `current_setting('app.tenant_id')::uuid`.
 - The application layer reads tenant scope from `req.user` populated upstream (the `TenantContextInterceptor` is the single entry point).
-- Tenant-scoped queries MUST go through the Prisma `scoped()` extension. Raw queries that target tenant tables MUST run inside `withRlsTransaction()`.
+- The application connects to PostgreSQL with role `taller_app` (`NOSUPERUSER NOBYPASSRLS`). Without `SET LOCAL app.tenant_id`, RLS returns zero rows for every tenant-scoped table — including ORM-generated queries.
+- Every query (ORM or raw) that touches a tenant-scoped table MUST run inside `withRlsTransaction()`. The helper sets `app.tenant_id` for the transaction; without it the query returns nothing in production.
+- `prisma.scoped()` remains the canonical query builder: it auto-injects `tenantId` for `create*` and adds defense-in-depth filtering for read/update/delete operations. It MUST be called from within `withRlsTransaction()`.
 - The application database role MUST NOT have `SUPERUSER` or `BYPASSRLS`.
 - Cross-tenant access attempts MUST return 404, never 403, to avoid leaking resource existence.
 - Global models (e.g. `User`) are not auto-filtered. Only models in the explicit `TENANT_SCOPED_MODELS` list are filtered.
