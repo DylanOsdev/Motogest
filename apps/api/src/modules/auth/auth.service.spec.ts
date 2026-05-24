@@ -66,6 +66,31 @@ describe('AuthService', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
     });
 
+    it('calls EmailService.sendVerificationEmail with user email and token', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockPrisma.$transaction.mockImplementation(async (fn) => {
+        const tx = {
+          tenant: { create: jest.fn().mockResolvedValue({ id: 'tenant-1' }) },
+          user: { create: jest.fn().mockResolvedValue({ id: 'user-1' }) },
+          emailVerification: {
+            create: jest.fn().mockResolvedValue({ token: 'tok' }),
+          },
+          $executeRawUnsafe: jest.fn(),
+          userTenant: { create: jest.fn().mockResolvedValue({}) },
+          subscription: { create: jest.fn().mockResolvedValue({}) },
+        };
+        return fn(tx);
+      });
+
+      await service.signup(dto);
+
+      expect(mockEmail.sendVerificationEmail).toHaveBeenCalledWith(
+        dto.email,
+        expect.any(String),
+        dto.tenantName,
+      );
+    });
+
     it('throws ConflictException on duplicate email', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'existing' });
 
