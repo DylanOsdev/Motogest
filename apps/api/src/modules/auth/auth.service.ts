@@ -1,0 +1,82 @@
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { SignupDto } from './dto/signup.dto';
+import type { EmailService } from '../../common/email/email.interface';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+    @Inject('EMAIL_SERVICE') private readonly email: EmailService,
+  ) {}
+
+  async signup(dto: SignupDto): Promise<{ message: string }> {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (existing) {
+      throw new ConflictException('EMAIL_ALREADY_EXISTS');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const verificationToken = randomUUID();
+
+    await this.prisma.$transaction(async (tx) => {
+      // Phase 1: global tables (no RLS needed)
+      const tenant = await tx.tenant.create({
+        data: {
+          name: dto.tenantName,
+          slug: dto.tenantSlug,
+          subdomain: dto.tenantSlug,
+          status: 'pending_verification',
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          email: dto.email,
+          passwordHash,
+          fullName: dto.fullName,
+          status: 'pending_verification',
+        },
+      });
+
+      await tx.emailVerification.create({
+        data: {
+          userId: user.id,
+          token: verificationToken,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Phase 2: tenant-scoped tables — SET LOCAL for RLS
+      await tx.$executeRawUnsafe(
+        `SET LOCAL app.tenant_id = '${tenant.id}'`,
+      );
+
+      await tx.userTenant.create({
+        data: { userId: user.id, tenantId: tenant.id, role: 'admin_taller' },
+      });
+
+      await tx.subscription.create({
+        data: {
+          tenantId: tenant.id,
+          plan: 'free',
+          status: 'trialing',
+        },
+      });
+    });
+
+    await this.email.sendVerificationEmail(
+      dto.email,
+      verificationToken,
+      dto.tenantName,
+    );
+
+    return { message: 'verify_email_sent' };
+  }
+}
