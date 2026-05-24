@@ -1,9 +1,16 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
+import { LoginDto } from './dto/login.dto';
 import type { EmailService } from '../../common/email/email.interface';
 
 @Injectable()
@@ -78,5 +85,34 @@ export class AuthService {
     );
 
     return { message: 'verify_email_sent' };
+  }
+
+  async login(dto: LoginDto): Promise<{ accessToken: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      include: { tenants: { include: { tenant: true } } },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const valid = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const membership = user.tenants[0];
+    if (!user.emailVerified || membership.tenant.status === 'pending_verification') {
+      throw new ForbiddenException('EMAIL_NOT_VERIFIED');
+    }
+
+    const accessToken = await this.jwt.signAsync({
+      sub: user.id,
+      tenantId: membership.tenantId,
+      role: membership.role,
+    });
+
+    return { accessToken };
   }
 }
