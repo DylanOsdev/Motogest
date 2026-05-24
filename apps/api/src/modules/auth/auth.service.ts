@@ -12,6 +12,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import type { EmailService } from '../../common/email/email.interface';
+import { EMAIL_VERIFICATION_EXPIRES_HOURS } from './auth.constants';
 
 @Injectable()
 export class AuthService {
@@ -56,7 +57,9 @@ export class AuthService {
         data: {
           userId: user.id,
           token: verificationToken,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          expiresAt: new Date(
+            Date.now() + EMAIL_VERIFICATION_EXPIRES_HOURS * 60 * 60 * 1000,
+          ),
         },
       });
 

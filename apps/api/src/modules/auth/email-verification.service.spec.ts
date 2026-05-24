@@ -1,5 +1,4 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
 import { EmailVerificationService } from './email-verification.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
