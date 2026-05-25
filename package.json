@@ -8,7 +8,10 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
+    "ci:local": "bash scripts/ci-local.sh",
+    "ci:local:fast": "bash scripts/ci-local.sh --fast",
+    "prepare": "node -e \"try { require('child_process').execSync('git config core.hooksPath .githooks', {stdio:'inherit'}) } catch (e) {}\""
   },
   "devDependencies": {
     "turbo": "^2.5.0",
