@@ -67,6 +67,9 @@ describe('EmailVerificationService', () => {
       mockPrisma.emailVerification.findFirst.mockResolvedValue(record);
 
       await expect(service.verify('expired-token')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.verify('expired-token')).rejects.toThrow(
         'EMAIL_VERIFICATION_EXPIRED',
       );
     });
@@ -85,6 +88,9 @@ describe('EmailVerificationService', () => {
       mockPrisma.emailVerification.findFirst.mockResolvedValue(record);
 
       await expect(service.verify('used-token')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.verify('used-token')).rejects.toThrow(
         'EMAIL_VERIFICATION_USED',
       );
     });
@@ -93,6 +99,9 @@ describe('EmailVerificationService', () => {
       mockPrisma.$transaction.mockImplementation(async (fn) => fn(mockPrisma));
       mockPrisma.emailVerification.findFirst.mockResolvedValue(null);
 
+      await expect(service.verify('nonexistent')).rejects.toThrow(
+        BadRequestException,
+      );
       await expect(service.verify('nonexistent')).rejects.toThrow(
         'EMAIL_VERIFICATION_INVALID_TOKEN',
       );
