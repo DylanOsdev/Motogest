@@ -1,8 +1,13 @@
 import { Test } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -45,7 +50,9 @@ describe('AuthService', () => {
         const tx = {
           tenant: { create: jest.fn().mockResolvedValue({ id: 'tenant-1' }) },
           user: { create: jest.fn().mockResolvedValue({ id: 'user-1' }) },
-          emailVerification: { create: jest.fn().mockResolvedValue({ token: 'tok' }) },
+          emailVerification: {
+            create: jest.fn().mockResolvedValue({ token: 'tok' }),
+          },
           $executeRawUnsafe: jest.fn(),
           userTenant: { create: jest.fn().mockResolvedValue({}) },
           subscription: { create: jest.fn().mockResolvedValue({}) },
@@ -75,10 +82,16 @@ describe('AuthService', () => {
         email: dto.email,
         passwordHash: '$2b$10$validhash',
         emailVerified: true,
-        tenants: [{ tenantId: 'tenant-1', role: 'admin_taller', tenant: { status: 'active' } }],
+        tenants: [
+          {
+            tenantId: 'tenant-1',
+            role: 'admin_taller',
+            tenant: { status: 'active' },
+          },
+        ],
       });
       // Mock bcrypt compare
-      jest.spyOn(require('bcrypt'), 'compare').mockResolvedValue(true as never);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
       const result = await service.login(dto);
 
@@ -96,9 +109,15 @@ describe('AuthService', () => {
         email: dto.email,
         passwordHash: '$2b$10$validhash',
         emailVerified: false,
-        tenants: [{ tenantId: 'tenant-1', role: 'admin_taller', tenant: { status: 'pending_verification' } }],
+        tenants: [
+          {
+            tenantId: 'tenant-1',
+            role: 'admin_taller',
+            tenant: { status: 'pending_verification' },
+          },
+        ],
       });
-      jest.spyOn(require('bcrypt'), 'compare').mockResolvedValue(true as never);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
       await expect(service.login(dto)).rejects.toThrow(ForbiddenException);
     });
@@ -109,9 +128,15 @@ describe('AuthService', () => {
         email: dto.email,
         passwordHash: '$2b$10$validhash',
         emailVerified: true,
-        tenants: [{ tenantId: 'tenant-1', role: 'admin_taller', tenant: { status: 'active' } }],
+        tenants: [
+          {
+            tenantId: 'tenant-1',
+            role: 'admin_taller',
+            tenant: { status: 'active' },
+          },
+        ],
       });
-      jest.spyOn(require('bcrypt'), 'compare').mockResolvedValue(false as never);
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
