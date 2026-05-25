@@ -21,17 +21,21 @@ cd "$ROOT"
 
 # ---------------------------------------------------------------------
 # Config — must match .github/workflows/ci.yml exactly
+#
+# These are NOT readonly because the test functions below pass them
+# inline as per-command env overrides (VAR="$VAR" cmd ...), which bash
+# rejects on readonly variables even when the value is unchanged.
 # ---------------------------------------------------------------------
-readonly DB_USER="taller"
-readonly DB_PASS="taller_dev"
-readonly DB_NAME="taller_saas_test"
-readonly DB_HOST="localhost"
-readonly DB_PORT="5432"
-readonly REDIS_URL="redis://localhost:6379"
-readonly JWT_SECRET="test-secret"
+DB_USER="taller"
+DB_PASS="taller_dev"
+DB_NAME="taller_saas_test"
+DB_HOST="localhost"
+DB_PORT="5432"
+REDIS_URL="redis://localhost:6379"
+JWT_SECRET="test-secret"
 
-readonly DATABASE_URL_OWNER="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-readonly DATABASE_URL_APP="postgresql://taller_app:taller_app_dev@${DB_HOST}:${DB_PORT}/${DB_NAME}?schema=public"
+DATABASE_URL_OWNER="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+DATABASE_URL_APP="postgresql://taller_app:taller_app_dev@${DB_HOST}:${DB_PORT}/${DB_NAME}?schema=public"
 
 # ---------------------------------------------------------------------
 # Mode
