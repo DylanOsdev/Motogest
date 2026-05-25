@@ -2,8 +2,9 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomUUID } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { REFRESH_EXPIRES_IN_DAYS } from './auth.constants';
 
-const REFRESH_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const REFRESH_EXPIRES_MS = REFRESH_EXPIRES_IN_DAYS * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class RefreshTokenService {
