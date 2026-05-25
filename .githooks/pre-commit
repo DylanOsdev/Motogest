@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+#
+# Keeps Gentleman Guardian Angel active under core.hooksPath=.githooks.
+# Mirrors what `gga install` writes to .git/hooks/pre-commit, but lives
+# in a versioned directory so every clone gets it via `pnpm prepare`.
+#
+# If GGA is not installed on this machine, fall through silently rather
+# than blocking commits — local dev should not require GGA to be present.
+
+if command -v gga >/dev/null 2>&1; then
+  gga run || exit 1
+fi
