@@ -37,8 +37,15 @@ These rules implement the three-layer defense documented in `docs/adr/0001-multi
   - PostgreSQL Row-Level Security enabled and forced, with a `tenant_isolation` policy filtering by `current_setting('app.tenant_id')::uuid`.
 - The application layer reads tenant scope from `req.user` populated upstream (the `TenantContextInterceptor` is the single entry point).
 - The application connects to PostgreSQL with role `taller_app` (`NOSUPERUSER NOBYPASSRLS`). Without `SET LOCAL app.tenant_id`, RLS returns zero rows for every tenant-scoped table — including ORM-generated queries.
-- Every query (ORM or raw) that touches a tenant-scoped table MUST run inside `withRlsTransaction()`. The helper sets `app.tenant_id` for the transaction; without it the query returns nothing in production.
-- `prisma.scoped()` remains the canonical query builder: it auto-injects `tenantId` for `create*` and adds defense-in-depth filtering for read/update/delete operations. It MUST be called from within `withRlsTransaction()`.
+- Every query (ORM or raw) that touches a **tenant-scoped** table MUST run inside `withRlsTransaction()`. The helper sets `app.tenant_id` for the transaction; without it the query returns nothing in production.
+- `prisma.scoped()` remains the canonical query builder for tenant-scoped tables: it auto-injects `tenantId` for `create*` and adds defense-in-depth filtering for read/update/delete operations. It MUST be called from within `withRlsTransaction()`.
+- **Tenant-scoped vs global models — authoritative source is `TENANT_SCOPED_MODELS` in `apps/api/src/common/prisma/prisma.service.ts`**:
+  - **Tenant-scoped** (have `tenantId` column, RLS-enabled, MUST use `prisma.scoped()` inside `withRlsTransaction()`): `UserTenant`, `Subscription`, `AuditLog`. Any future model added to `TENANT_SCOPED_MODELS` joins this list.
+  - **Global** (no `tenantId` column, no RLS, accessed via plain `prisma.<model>` — never through `prisma.scoped()`): `Tenant`, `User`, `EmailVerification`, `RefreshToken`. Services that only touch global models (e.g. `RefreshTokenService`, `EmailVerificationService`) do NOT need `withRlsTransaction()`. Reviewers MUST NOT flag them as missing the wrapper.
+- **Bootstrap exception (signup only)**: The signup path creates the tenant itself, so it executes BEFORE any tenant context exists. It is the ONLY code path allowed to write to tenant-scoped tables outside `withRlsTransaction()`/`prisma.scoped()`, and it MUST follow this two-phase pattern inside a single atomic `prisma.$transaction`:
+  1. Phase 1 — create global rows (`Tenant`, `User`, `EmailVerification`) directly on the transaction client.
+  2. Phase 2 — within the same transaction, run ``tx.$executeRawUnsafe(`SET LOCAL app.tenant_id = '<new-tenant-id>'`)`` and then create tenant-scoped rows (`UserTenant`, `Subscription`) directly on the transaction client. RLS is now satisfied because `app.tenant_id` is set.
+  Reviewers MUST recognize this pattern in `apps/api/src/modules/auth/auth.service.ts#signup` and NOT flag it as a missing `prisma.scoped()` / `withRlsTransaction()` call.
 - The application database role MUST NOT have `SUPERUSER` or `BYPASSRLS`.
 - Cross-tenant access attempts MUST return 404, never 403, to avoid leaking resource existence.
 - Global models (e.g. `User`) are not auto-filtered. Only models in the explicit `TENANT_SCOPED_MODELS` list are filtered.
