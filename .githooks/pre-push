@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# .githooks/pre-push
+#
+# Fast gate before any push. Runs lint + unit tests + build only (~1-2 min).
+# Full validation including E2E and web tests must be invoked manually with:
+#   pnpm ci:local
+#
+# Skip with: git push --no-verify
+# (Document the reason in the PR if you bypass.)
+
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+printf "\n\033[1;34m▶ pre-push: running fast local checks\033[0m\n"
+printf "  (lint + unit tests + build — full E2E suite via 'pnpm ci:local')\n\n"
+
+bash "$ROOT/scripts/ci-local.sh" --fast
