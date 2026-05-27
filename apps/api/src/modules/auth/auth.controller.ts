@@ -12,6 +12,10 @@ import {
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { RefreshTokenService } from './refresh-token.service';
@@ -76,5 +80,16 @@ export class AuthController {
       await this.refreshToken.rotate(rawToken);
     res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
     return { accessToken };
+  }
+
+  @Get('me')
+  getMe(@CurrentUser() user: AuthenticatedUser): Promise<{
+    id: string;
+    email: string;
+    fullName: string;
+    role: string;
+    tenantId: string;
+  }> {
+    return this.auth.getCurrentUser(user.id, user.tenantId);
   }
 }

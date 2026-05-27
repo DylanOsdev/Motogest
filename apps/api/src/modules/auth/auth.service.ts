@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -124,5 +125,40 @@ export class AuthService {
     const { refreshToken } = await this.refreshToken.create(user.id);
 
     return { accessToken, refreshToken };
+  }
+
+  async getCurrentUser(
+    userId: string,
+    tenantId: string,
+  ): Promise<{
+    id: string;
+    email: string;
+    fullName: string;
+    role: string;
+    tenantId: string;
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, fullName: true },
+    });
+    if (!user) {
+      throw new NotFoundException('USER_NOT_FOUND');
+    }
+
+    const membership = await this.prisma.userTenant.findFirst({
+      where: { userId, tenantId },
+      select: { role: true, tenantId: true },
+    });
+    if (!membership) {
+      throw new NotFoundException('MEMBERSHIP_NOT_FOUND');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: membership.role,
+      tenantId: membership.tenantId,
+    };
   }
 }
