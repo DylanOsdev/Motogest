@@ -100,3 +100,8 @@ The `auth_lookup` policy on `user_tenants` allows SELECT when `current_setting('
 
 - Generated files (`dist/`, `coverage/`, Prisma client output, lockfiles).
 - Local planning artifacts under `openspec/` (gitignored).
+
+## Reviewer Output Contract
+
+- Emit the verdict token in English exactly: `STATUS: PASSED` or `STATUS: FAILED`.
+- Never translate, reword, or localize the verdict token. The literal English string is required by the tooling.
