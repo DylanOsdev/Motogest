@@ -137,3 +137,103 @@ model AuditLog {
   @@index([userId])
   @@map("audit_logs")
 }
+
+// ============================================
+// TENANT-SCOPED BUSINESS MODELS — RLS enforced
+// ============================================
+
+model Client {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  firstName String   @map("first_name") @db.VarChar(100)
+  lastName  String   @map("last_name") @db.VarChar(100)
+  email     String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(20)
+  address   String?  @db.Text
+  notes     String?  @db.Text
+  status    String   @default("active") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  vehicles Vehicle[]
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, phone])
+  @@index([tenantId, lastName, firstName])
+  @@map("clients")
+}
+
+model Vehicle {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  clientId  String   @map("client_id") @db.Uuid
+  brand     String   @db.VarChar(100)
+  model     String   @db.VarChar(100)
+  year      Int?
+  plate     String   @db.VarChar(20)
+  vin       String?  @db.VarChar(17)
+  color     String?  @db.VarChar(50)
+  fuelType  String?  @map("fuel_type") @db.VarChar(30)
+  mileage   Int?     @default(0)
+  notes     String?  @db.Text
+  status    String   @default("active") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, plate])
+  @@unique([tenantId, vin])
+  @@index([tenantId, brand, model])
+  @@index([clientId])
+  @@map("vehicles")
+}
+
+model Mechanic {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  firstName   String   @map("first_name") @db.VarChar(100)
+  lastName    String   @map("last_name") @db.VarChar(100)
+  email       String?  @db.VarChar(255)
+  phone       String?  @db.VarChar(20)
+  specialties String[] @db.VarChar(100)
+  hireDate    DateTime? @map("hire_date")
+  notes       String?  @db.Text
+  status      String   @default("active") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, phone])
+  @@index([tenantId, lastName, firstName])
+  @@map("mechanics")
+}
+
+model SparePart {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  code         String   @db.VarChar(50)
+  name         String   @db.VarChar(200)
+  description  String?  @db.Text
+  category     String?  @db.VarChar(100)
+  unit         String   @default("unit") @db.VarChar(30)
+  currentStock Int      @default(0) @map("current_stock")
+  minStock     Int      @default(0) @map("min_stock")
+  maxStock     Int      @default(0) @map("max_stock")
+  costPrice    Decimal? @map("cost_price") @db.Decimal(10, 2)
+  salePrice    Decimal? @map("sale_price") @db.Decimal(10, 2)
+  supplier     String?  @db.VarChar(200)
+  notes        String?  @db.Text
+  status       String   @default("active") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, code])
+  @@index([tenantId, name])
+  @@index([tenantId, category])
+  @@map("spare_parts")
+}
