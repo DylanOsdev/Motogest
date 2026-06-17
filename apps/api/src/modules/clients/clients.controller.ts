@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
@@ -17,9 +18,11 @@ import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { QueryClientDto } from './dto/query-client.dto';
+import { TenantContextInterceptor } from '../../common/tenant/tenant-context.interceptor';
 
 @Controller('clients')
 @Roles('admin_taller', 'recepcionista')
+@UseInterceptors(TenantContextInterceptor)
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 

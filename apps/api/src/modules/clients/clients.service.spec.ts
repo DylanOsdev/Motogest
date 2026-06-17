@@ -10,6 +10,19 @@ describe('ClientsService', () => {
 
   const mockTenantId = '00000000-0000-0000-0000-000000000001';
 
+  const createMockTx = () => ({
+    client: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    vehicle: {
+      count: jest.fn(),
+    },
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -17,29 +30,10 @@ describe('ClientsService', () => {
         {
           provide: PrismaService,
           useValue: {
-            client: {
-              findFirst: jest.fn(),
-              findMany: jest.fn(),
-              count: jest.fn(),
-              create: jest.fn(),
-              update: jest.fn(),
-            },
-            vehicle: {
-              count: jest.fn(),
-            },
-            withRlsTransaction: jest.fn(async (fn) => {
-              const mockTx = {
-                client: {
-                  create: jest.fn(),
-                  update: jest.fn(),
-                },
-              };
-              return fn(mockTx);
-            }),
-            $transaction: jest.fn(async (ops) => {
-              if (Array.isArray(ops)) return await Promise.all(ops);
-              return ops({});
-            }),
+            withRlsTransaction: jest.fn(
+              async (fn: (tx: unknown) => Promise<unknown>) =>
+                fn(createMockTx()),
+            ),
           },
         },
       ],
@@ -51,8 +45,7 @@ describe('ClientsService', () => {
 
   describe('create', () => {
     const createDto = {
-      firstName: 'Juan',
-      lastName: 'Pérez',
+      name: 'Juan Pérez',
       email: 'juan@test.com',
       phone: '1145678901',
     };
@@ -63,14 +56,11 @@ describe('ClientsService', () => {
         ...createDto,
         tenantId: mockTenantId,
       };
-      prisma.client.findFirst.mockResolvedValue(null);
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(null);
+      mockTx.client.create.mockResolvedValue(createdClient);
       prisma.withRlsTransaction.mockImplementation(
-        async (fn: (tx: unknown) => Promise<unknown>) => {
-          const mockTx = {
-            client: { create: jest.fn().mockResolvedValue(createdClient) },
-          };
-          return fn(mockTx);
-        },
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
       );
 
       const result = await service.create(mockTenantId, createDto);
@@ -79,7 +69,11 @@ describe('ClientsService', () => {
     });
 
     it('should throw ConflictException on duplicate email', async () => {
-      prisma.client.findFirst.mockResolvedValue({ id: 'existing' });
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue({ id: 'existing' });
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await expect(service.create(mockTenantId, createDto)).rejects.toThrow(
         ConflictException,
@@ -87,9 +81,13 @@ describe('ClientsService', () => {
     });
 
     it('should throw ConflictException on duplicate phone', async () => {
-      prisma.client.findFirst
-        .mockResolvedValueOnce(null) // email check passes
-        .mockResolvedValueOnce({ id: 'existing' }); // phone check fails
+      const mockTx = createMockTx();
+      mockTx.client.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'existing' });
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await expect(service.create(mockTenantId, createDto)).rejects.toThrow(
         ConflictException,
@@ -97,19 +95,17 @@ describe('ClientsService', () => {
     });
 
     it('should allow null email and phone', async () => {
-      const dtoWithoutContact = { firstName: 'Juan', lastName: 'Pérez' };
+      const dtoWithoutContact = { name: 'Juan Pérez' };
       const createdClient = {
         id: 'client-2',
         ...dtoWithoutContact,
         tenantId: mockTenantId,
       };
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(null);
+      mockTx.client.create.mockResolvedValue(createdClient);
       prisma.withRlsTransaction.mockImplementation(
-        async (fn: (tx: unknown) => Promise<unknown>) => {
-          const mockTx = {
-            client: { create: jest.fn().mockResolvedValue(createdClient) },
-          };
-          return fn(mockTx);
-        },
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
       );
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,8 +119,13 @@ describe('ClientsService', () => {
 
   describe('findAll', () => {
     it('should return paginated results with default params', async () => {
-      const clients = [{ id: '1', firstName: 'Juan' }];
-      prisma.$transaction.mockResolvedValue([clients, 1]);
+      const clients = [{ id: '1', name: 'Juan Pérez' }];
+      const mockTx = createMockTx();
+      mockTx.client.findMany.mockResolvedValue(clients);
+      mockTx.client.count.mockResolvedValue(1);
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       const result = await service.findAll(mockTenantId, {});
 
@@ -132,33 +133,46 @@ describe('ClientsService', () => {
       expect(result.meta).toEqual({
         total: 1,
         page: 1,
-        limit: 20,
-        totalPages: 1,
+        limit: 50,
+        total_pages: 1,
       });
     });
 
-    it('should filter by search term across firstName/lastName/email', async () => {
-      prisma.$transaction.mockResolvedValue([[], 0]);
+    it('should filter by search term across name/email', async () => {
+      const mockTx = createMockTx();
+      mockTx.client.findMany.mockResolvedValue([]);
+      mockTx.client.count.mockResolvedValue(0);
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await service.findAll(mockTenantId, { search: 'juan' });
 
-      // Verify $transaction was called (search logic constructs the where clause)
-      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.withRlsTransaction).toHaveBeenCalled();
     });
 
     it('should respect custom page and limit', async () => {
-      prisma.$transaction.mockResolvedValue([[], 0]);
+      const mockTx = createMockTx();
+      mockTx.client.findMany.mockResolvedValue([]);
+      mockTx.client.count.mockResolvedValue(0);
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await service.findAll(mockTenantId, { page: 2, limit: 5 });
 
-      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.withRlsTransaction).toHaveBeenCalled();
     });
   });
 
   describe('findOne', () => {
     it('should return client by id', async () => {
-      const client = { id: 'client-1', firstName: 'Juan' };
-      prisma.client.findFirst.mockResolvedValue(client);
+      const client = { id: 'client-1', name: 'Juan Pérez' };
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(client);
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       const result = await service.findOne(mockTenantId, 'client-1');
 
@@ -166,7 +180,11 @@ describe('ClientsService', () => {
     });
 
     it('should throw NotFoundException for non-existent client', async () => {
-      prisma.client.findFirst.mockResolvedValue(null);
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(null);
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await expect(
         service.findOne(mockTenantId, 'nonexistent'),
@@ -175,23 +193,20 @@ describe('ClientsService', () => {
   });
 
   describe('update', () => {
-    const updateDto = { firstName: 'Updated' };
+    const updateDto = { name: 'Updated Name' };
 
     it('should patch allowed fields', async () => {
       const existing = {
         id: 'client-1',
-        firstName: 'Juan',
+        name: 'Juan Pérez',
         email: 'juan@test.com',
       };
-      const updated = { ...existing, firstName: 'Updated' };
-      prisma.client.findFirst.mockResolvedValue(existing);
+      const updated = { ...existing, name: 'Updated Name' };
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(existing);
+      mockTx.client.update.mockResolvedValue(updated);
       prisma.withRlsTransaction.mockImplementation(
-        async (fn: (tx: unknown) => Promise<unknown>) => {
-          const mockTx = {
-            client: { update: jest.fn().mockResolvedValue(updated) },
-          };
-          return fn(mockTx);
-        },
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
       );
 
       const result = await service.update(mockTenantId, 'client-1', updateDto);
@@ -200,7 +215,11 @@ describe('ClientsService', () => {
     });
 
     it('should throw NotFoundException for non-existent client', async () => {
-      prisma.client.findFirst.mockResolvedValue(null);
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(null);
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await expect(
         service.update(mockTenantId, 'nonexistent', updateDto),
@@ -209,9 +228,13 @@ describe('ClientsService', () => {
 
     it('should throw ConflictException on email duplicate', async () => {
       const existing = { id: 'client-1', email: 'old@test.com' };
-      prisma.client.findFirst
+      const mockTx = createMockTx();
+      mockTx.client.findFirst
         .mockResolvedValueOnce(existing)
         .mockResolvedValueOnce({ id: 'other' });
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await expect(
         service.update(mockTenantId, 'client-1', {
@@ -225,15 +248,12 @@ describe('ClientsService', () => {
     it('should soft-delete client (status → inactive)', async () => {
       const existing = { id: 'client-1', status: 'active' };
       const updated = { ...existing, status: 'inactive' };
-      prisma.client.findFirst.mockResolvedValue(existing);
-      prisma.vehicle.count.mockResolvedValue(0);
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(existing);
+      mockTx.vehicle.count.mockResolvedValue(0);
+      mockTx.client.update.mockResolvedValue(updated);
       prisma.withRlsTransaction.mockImplementation(
-        async (fn: (tx: unknown) => Promise<unknown>) => {
-          const mockTx = {
-            client: { update: jest.fn().mockResolvedValue(updated) },
-          };
-          return fn(mockTx);
-        },
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
       );
 
       const result = await service.remove(mockTenantId, 'client-1');
@@ -243,8 +263,12 @@ describe('ClientsService', () => {
 
     it('should reject when client has vehicles', async () => {
       const existing = { id: 'client-1' };
-      prisma.client.findFirst.mockResolvedValue(existing);
-      prisma.vehicle.count.mockResolvedValue(3);
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(existing);
+      mockTx.vehicle.count.mockResolvedValue(3);
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await expect(service.remove(mockTenantId, 'client-1')).rejects.toThrow(
         ConflictException,
@@ -252,7 +276,11 @@ describe('ClientsService', () => {
     });
 
     it('should throw NotFoundException for non-existent client', async () => {
-      prisma.client.findFirst.mockResolvedValue(null);
+      const mockTx = createMockTx();
+      mockTx.client.findFirst.mockResolvedValue(null);
+      prisma.withRlsTransaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
+      );
 
       await expect(service.remove(mockTenantId, 'nonexistent')).rejects.toThrow(
         NotFoundException,

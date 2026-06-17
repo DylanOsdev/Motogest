@@ -9,7 +9,6 @@ import {
   seedActiveUserWithTenant,
 } from '../helpers/auth-seed.helper';
 import { truncateClientsTable } from '../helpers/client-seed.helper';
-import { signTestJwt } from '../helpers/jwt.helper';
 
 describe('Clients API (e2e)', () => {
   let app: INestApplication;
@@ -48,15 +47,13 @@ describe('Clients API (e2e)', () => {
         .post('/clients')
         .set('Authorization', `Bearer ${seeded.accessToken}`)
         .send({
-          firstName: 'Juan',
-          lastName: 'Pérez',
+          name: 'Juan Pérez',
           email: 'juan@test.com',
           phone: '1145678901',
         })
         .expect(201);
 
-      expect(res.body.firstName).toBe('Juan');
-      expect(res.body.lastName).toBe('Pérez');
+      expect(res.body.name).toBe('Juan Pérez');
       expect(res.body.email).toBe('juan@test.com');
       expect(res.body.status).toBe('active');
     });
@@ -67,13 +64,13 @@ describe('Clients API (e2e)', () => {
       await request(app.getHttpServer())
         .post('/clients')
         .set('Authorization', `Bearer ${seeded.accessToken}`)
-        .send({ firstName: 'A', lastName: 'B', email: 'dup@test.com' })
+        .send({ name: 'A', email: 'dup@test.com' })
         .expect(201);
 
       await request(app.getHttpServer())
         .post('/clients')
         .set('Authorization', `Bearer ${seeded.accessToken}`)
-        .send({ firstName: 'C', lastName: 'D', email: 'dup@test.com' })
+        .send({ name: 'B', email: 'dup@test.com' })
         .expect(409);
     });
 
@@ -83,14 +80,14 @@ describe('Clients API (e2e)', () => {
       await request(app.getHttpServer())
         .post('/clients')
         .set('Authorization', `Bearer ${seeded.accessToken}`)
-        .send({ lastName: 'Pérez' })
+        .send({ email: 'juan@test.com' })
         .expect(400);
     });
 
     it('rejects unauthenticated requests with 401', async () => {
       await request(app.getHttpServer())
         .post('/clients')
-        .send({ firstName: 'Juan', lastName: 'Pérez' })
+        .send({ name: 'Juan Pérez' })
         .expect(401);
     });
   });
@@ -102,8 +99,7 @@ describe('Clients API (e2e)', () => {
       await seedPrisma.client.create({
         data: {
           tenantId: seeded.tenantId,
-          firstName: 'Juan',
-          lastName: 'Pérez',
+          name: 'Juan Pérez',
           email: 'juan@test.com',
         },
       });
@@ -123,8 +119,8 @@ describe('Clients API (e2e)', () => {
 
       await seedPrisma.client.createMany({
         data: [
-          { tenantId: seeded.tenantId, firstName: 'Juan', lastName: 'Pérez' },
-          { tenantId: seeded.tenantId, firstName: 'María', lastName: 'García' },
+          { tenantId: seeded.tenantId, name: 'Juan Pérez' },
+          { tenantId: seeded.tenantId, name: 'María García' },
         ],
       });
 
@@ -134,7 +130,7 @@ describe('Clients API (e2e)', () => {
         .expect(200);
 
       expect(res.body.data).toHaveLength(1);
-      expect(res.body.data[0].firstName).toBe('Juan');
+      expect(res.body.data[0].name).toBe('Juan Pérez');
     });
   });
 
@@ -145,8 +141,7 @@ describe('Clients API (e2e)', () => {
       const client = await seedPrisma.client.create({
         data: {
           tenantId: seeded.tenantId,
-          firstName: 'Juan',
-          lastName: 'Pérez',
+          name: 'Juan Pérez',
         },
       });
 
@@ -175,8 +170,7 @@ describe('Clients API (e2e)', () => {
       const client = await seedPrisma.client.create({
         data: {
           tenantId: seeded.tenantId,
-          firstName: 'Juan',
-          lastName: 'Pérez',
+          name: 'Juan Pérez',
           phone: '1111111111',
         },
       });
@@ -198,8 +192,7 @@ describe('Clients API (e2e)', () => {
       const client = await seedPrisma.client.create({
         data: {
           tenantId: seeded.tenantId,
-          firstName: 'Juan',
-          lastName: 'Pérez',
+          name: 'Juan Pérez',
         },
       });
 
@@ -217,8 +210,7 @@ describe('Clients API (e2e)', () => {
       const client = await seedPrisma.client.create({
         data: {
           tenantId: seeded.tenantId,
-          firstName: 'Juan',
-          lastName: 'Pérez',
+          name: 'Juan Pérez',
         },
       });
 
@@ -226,7 +218,7 @@ describe('Clients API (e2e)', () => {
         data: {
           tenantId: seeded.tenantId,
           clientId: client.id,
-          brand: 'Toyota',
+          make: 'Toyota',
           model: 'Corolla',
           plate: 'ABC123',
         },
@@ -246,8 +238,7 @@ describe('Clients API (e2e)', () => {
       const client = await seedPrisma.client.create({
         data: {
           tenantId: seeded.tenantId,
-          firstName: 'Juan',
-          lastName: 'Pérez',
+          name: 'Juan Pérez',
         },
       });
 
@@ -272,8 +263,7 @@ describe('Clients API (e2e)', () => {
       await seedPrisma.client.create({
         data: {
           tenantId: tenantB.tenantId,
-          firstName: 'Secret',
-          lastName: 'Client',
+          name: 'Secret Client',
         },
       });
 
@@ -298,15 +288,14 @@ describe('Clients API (e2e)', () => {
       const clientB = await seedPrisma.client.create({
         data: {
           tenantId: tenantB.tenantId,
-          firstName: 'Secret',
-          lastName: 'Client',
+          name: 'Secret Client',
         },
       });
 
       await request(app.getHttpServer())
         .patch(`/clients/${clientB.id}`)
         .set('Authorization', `Bearer ${tenantA.accessToken}`)
-        .send({ firstName: 'Hacked' })
+        .send({ name: 'Hacked' })
         .expect(404);
     });
   });

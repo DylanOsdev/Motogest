@@ -9,13 +9,8 @@ import {
 export class CreateClientDto {
   @IsString()
   @MinLength(1)
-  @MaxLength(100)
-  firstName: string;
-
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
-  lastName: string;
+  @MaxLength(255)
+  name: string;
 
   @IsOptional()
   @IsEmail()
@@ -24,14 +19,10 @@ export class CreateClientDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(20)
+  @MaxLength(50)
   phone?: string;
 
   @IsOptional()
   @IsString()
   address?: string;
-
-  @IsOptional()
-  @IsString()
-  notes?: string;
 }
