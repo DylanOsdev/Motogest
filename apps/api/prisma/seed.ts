@@ -36,6 +36,7 @@ async function main(): Promise<void> {
     update: { passwordHash },
     create: {
       email: 'admin@demo-taller.com',
+<<<<<<< HEAD
       passwordHash,
       fullName: 'Admin Demo',
       phone: '+5491155551234',
