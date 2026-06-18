@@ -1,0 +1,49 @@
+export const WORK_ORDER_MILESTONES = {
+  CREATED: 'created',
+  ASSIGNED: 'assigned',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  INVOICED: 'invoiced',
+  DELIVERED: 'delivered',
+  CANCELLED: 'cancelled',
+} as const;
+
+export type WorkOrderMilestone =
+  (typeof WORK_ORDER_MILESTONES)[keyof typeof WORK_ORDER_MILESTONES];
+
+export const VALID_TRANSITIONS: Record<string, string[]> = {
+  [WORK_ORDER_MILESTONES.CREATED]: [
+    WORK_ORDER_MILESTONES.ASSIGNED,
+    WORK_ORDER_MILESTONES.CANCELLED,
+  ],
+  [WORK_ORDER_MILESTONES.ASSIGNED]: [
+    WORK_ORDER_MILESTONES.IN_PROGRESS,
+    WORK_ORDER_MILESTONES.CANCELLED,
+  ],
+  [WORK_ORDER_MILESTONES.IN_PROGRESS]: [
+    WORK_ORDER_MILESTONES.COMPLETED,
+    WORK_ORDER_MILESTONES.CANCELLED,
+  ],
+  [WORK_ORDER_MILESTONES.COMPLETED]: [
+    WORK_ORDER_MILESTONES.INVOICED,
+    WORK_ORDER_MILESTONES.CANCELLED,
+  ],
+  [WORK_ORDER_MILESTONES.INVOICED]: [
+    WORK_ORDER_MILESTONES.DELIVERED,
+    WORK_ORDER_MILESTONES.CANCELLED,
+  ],
+  [WORK_ORDER_MILESTONES.DELIVERED]: [],
+  [WORK_ORDER_MILESTONES.CANCELLED]: [],
+};
+
+export function isValidTransition(from: string, to: string): boolean {
+  return VALID_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+export function isFinalMilestone(milestone: string): boolean {
+  return (
+    milestone === WORK_ORDER_MILESTONES.COMPLETED ||
+    milestone === WORK_ORDER_MILESTONES.DELIVERED ||
+    milestone === WORK_ORDER_MILESTONES.CANCELLED
+  );
+}

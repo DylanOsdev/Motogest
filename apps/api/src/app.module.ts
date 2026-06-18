@@ -15,6 +15,7 @@ import { ClientsModule } from './modules/clients/clients.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { MechanicsModule } from './modules/mechanics/mechanics.module';
 import { SparePartsModule } from './modules/spare-parts/spare-parts.module';
+import { WorkOrdersModule } from './modules/work-orders/work-orders.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { SparePartsModule } from './modules/spare-parts/spare-parts.module';
     VehiclesModule,
     MechanicsModule,
     SparePartsModule,
+    WorkOrdersModule,
   ],
   controllers: [AppController],
   providers: [

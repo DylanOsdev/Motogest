@@ -154,7 +154,8 @@ model Client {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  vehicles Vehicle[]
+  vehicles   Vehicle[]
+  workOrders WorkOrder[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -180,7 +181,8 @@ model Vehicle {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  client Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  client     Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  workOrders WorkOrder[]
 
   @@unique([tenantId, plate])
   @@unique([tenantId, vin])
@@ -202,6 +204,8 @@ model Mechanic {
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  workOrders WorkOrderMechanic[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -233,4 +237,46 @@ model SparePart {
   @@index([tenantId, name])
   @@index([tenantId, category])
   @@map("spare_parts")
+}
+
+model WorkOrder {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  vehicleId     String    @map("vehicle_id") @db.Uuid
+  clientId      String    @map("client_id") @db.Uuid
+  milestone     String    @default("created") @db.VarChar(30)
+  priority      String    @default("normal") @db.VarChar(20)
+  scheduledAt   DateTime? @map("scheduled_at")
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  description   String    @db.Text
+  clientNotes   String?   @map("client_notes") @db.Text
+  internalNotes String?   @map("internal_notes") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  vehicle   Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  client    Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  mechanics WorkOrderMechanic[]
+
+  @@index([tenantId, milestone])
+  @@index([tenantId, vehicleId])
+  @@index([tenantId, clientId])
+  @@map("work_orders")
+}
+
+model WorkOrderMechanic {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  workOrderId String  @map("work_order_id") @db.Uuid
+  mechanicId  String  @map("mechanic_id") @db.Uuid
+  isPrimary   Boolean @default(false) @map("is_primary")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  mechanic  Mechanic  @relation(fields: [mechanicId], references: [id], onDelete: Restrict)
+
+  @@unique([workOrderId, mechanicId])
+  @@index([workOrderId])
+  @@index([mechanicId])
+  @@map("work_order_mechanics")
 }
