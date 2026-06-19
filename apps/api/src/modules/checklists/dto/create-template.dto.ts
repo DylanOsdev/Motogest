@@ -8,6 +8,7 @@ import {
   IsIn,
   MaxLength,
 } from 'class-validator';
+
 import { Type } from 'class-transformer';
 
 export class CreateQuestionDto {
@@ -20,7 +21,9 @@ export class CreateQuestionDto {
   type: string;
 
   @IsOptional()
-  options?: any;
+  @IsArray()
+  @IsString({ each: true })
+  options?: string[];
 
   @IsBoolean()
   @IsOptional()
