@@ -4,18 +4,20 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
-import { configureStore } from '@reduxjs/toolkit'
+import { configureStore, combineReducers, type Reducer } from '@reduxjs/toolkit'
 import authReducer, { type AuthState } from '../features/auth/slices/authSlice'
+import { api } from '../lib/http/api'
 import { theme } from '../lib/theme'
 
 interface RenderOptions {
   preloadedState?: { auth?: Partial<AuthState> }
   initialEntries?: string[]
+  additionalReducers?: Record<string, Reducer>
 }
 
 export function renderWithProviders(
   ui: React.ReactElement,
-  { preloadedState = {}, initialEntries = ['/'] }: RenderOptions = {},
+  { preloadedState = {}, initialEntries = ['/'], additionalReducers = {} }: RenderOptions = {},
 ): RenderResult & { store: ReturnType<typeof configureStore> } {
   const authInitial: AuthState = {
     user: null,
@@ -25,9 +27,17 @@ export function renderWithProviders(
     ...preloadedState.auth,
   }
 
+  const rootReducer = combineReducers({
+    auth: authReducer,
+    [api.reducerPath]: api.reducer,
+    ...additionalReducers,
+  })
+
   const store = configureStore({
-    reducer: { auth: authReducer },
+    reducer: rootReducer,
     preloadedState: { auth: authInitial },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(api.middleware),
   })
 
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
