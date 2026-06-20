@@ -50,26 +50,26 @@ export function EntityFormDialog<T extends FieldValues>({
     reset,
     formState: { errors },
   } = useForm<T>({
-    resolver: zodResolver(schema) as any,
-    defaultValues: initialValues as any,
+    resolver: zodResolver(schema) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    defaultValues: initialValues as any, // eslint-disable-line @typescript-eslint/no-explicit-any
   })
 
   useEffect(() => {
     if (open) {
-      reset(initialValues as any)
+      reset(initialValues as any) // eslint-disable-line @typescript-eslint/no-explicit-any
     }
   }, [open, initialValues, reset])
 
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
-      <form onSubmit={handleSubmit(onSubmit as any)}>
+      <form onSubmit={handleSubmit(onSubmit as any)}> {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
         <DialogTitle>{title}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {fields.map((field) => (
               <TextField
                 key={field.name}
-                {...register(field.name as any)}
+                {...register(field.name as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
                 label={field.label}
                 type={field.type === 'textarea' ? 'text' : field.type}
                 multiline={field.multiline}

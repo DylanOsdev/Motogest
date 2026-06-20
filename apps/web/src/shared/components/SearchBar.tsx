@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { TextField, InputAdornment } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 
@@ -18,9 +18,14 @@ export function SearchBar({
   fullWidth = true,
 }: SearchBarProps) {
   const [localValue, setLocalValue] = useState(value)
+  const isFirstRender = useRef(true)
 
+  // Sync with external value prop only on mount
   useEffect(() => {
-    setLocalValue(value)
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      setLocalValue(value)
+    }
   }, [value])
 
   useEffect(() => {

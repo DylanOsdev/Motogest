@@ -8,7 +8,8 @@ vi.mock('./axios', () => ({
   },
 }))
 
-const mockedRequest = vi.mocked(httpClient.request)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockedRequest = vi.mocked(httpClient.request) as any
 
 describe('httpClientBaseQuery', () => {
   beforeEach(() => {
@@ -17,11 +18,14 @@ describe('httpClientBaseQuery', () => {
 
   it('should return data on successful request', async () => {
     const mockData = { id: 1, name: 'Test' }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockedRequest.mockResolvedValueOnce({ data: mockData } as any)
 
     const result = await httpClientBaseQuery(
       { url: '/test', method: 'GET' },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {} as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {} as any,
     )
 
@@ -35,6 +39,7 @@ describe('httpClientBaseQuery', () => {
   })
 
   it('should pass body and params to httpClient', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockedRequest.mockResolvedValueOnce({ data: {} } as any)
 
     await httpClientBaseQuery(
@@ -44,7 +49,9 @@ describe('httpClientBaseQuery', () => {
         body: { name: 'Test' },
         params: { page: 1 },
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {} as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {} as any,
     )
 
@@ -67,7 +74,9 @@ describe('httpClientBaseQuery', () => {
 
     const result = await httpClientBaseQuery(
       { url: '/test', method: 'GET' },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {} as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {} as any,
     )
 
@@ -84,7 +93,9 @@ describe('httpClientBaseQuery', () => {
 
     const result = await httpClientBaseQuery(
       { url: '/test', method: 'GET' },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {} as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       {} as any,
     )
 
@@ -97,8 +108,10 @@ describe('httpClientBaseQuery', () => {
   })
 
   it('should default to GET method when not specified', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockedRequest.mockResolvedValueOnce({ data: {} } as any)
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await httpClientBaseQuery({ url: '/test' }, {} as any, {} as any)
 
     expect(mockedRequest).toHaveBeenCalledWith({
