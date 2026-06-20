@@ -134,7 +134,7 @@ describe('ClientsService', () => {
         total: 1,
         page: 1,
         limit: 50,
-        total_pages: 1,
+        totalPages: 1,
       });
     });
 
